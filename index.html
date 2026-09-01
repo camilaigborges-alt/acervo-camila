@@ -283,8 +283,8 @@ function addProd(){
 /* FORNECEDORES */
 function forn(a){
 let rows=db.fornecedores.map(f=>`
-<tr><td>${esc(f.nome)}</td><td>${esc(f.telefone)}</td><td>${esc(f.obs)}</td>
-<td><button class="secondary" onclick="excluir('fornecedores','${f.id}')">Excluir</button></td></tr>`).join("");
+<tr><td>${esc(f.nome)}</td><td>${esc(f.telefone)}</td><td>${esc(f.obs)}</td><td><button class="secondary" onclick="excluirFornecedor('${f.id}')">Excluir</button></td></tr>
+`).join("");
 
 a.innerHTML=`
 <div class="hero"><h2>Fornecedores</h2><p>Controle quem deixou peças no Acervo Camila.</p></div>
