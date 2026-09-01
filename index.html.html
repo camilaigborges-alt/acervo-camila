@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#9A431F">
+<title>Acervo Camila • Gestão</title>
+<style>
+:root{--creme:#fff8f2;--fundo:#f8e9dc;--pessego:#f3cdb5;--cobre:#b85b2b;--terr:#9a431f;--marrom:#4b2115;--dourado:#c9894b;--linha:#ead0bd;--branco:#fffaf6;--verde:#397d58;--vermelho:#a43c35}
+*{box-sizing:border-box}body{margin:0;background:var(--creme);color:var(--marrom);font-family:Arial,sans-serif}
+header{background:linear-gradient(90deg,var(--terr),var(--cobre));color:#fff;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:10px}.brand img{width:46px;height:46px;object-fit:contain;border-radius:50%;background:#fff}.brand b{font-size:18px}.brand small{display:block;opacity:.9}
+#date{font-size:13px}.hamb{display:none}
+nav{display:flex;gap:4px;overflow:auto;background:var(--fundo);padding:8px 12px;border-bottom:1px solid var(--linha);position:sticky;top:66px;z-index:19}
+nav button{border:0;background:transparent;color:var(--marrom);padding:9px 12px;border-radius:9px;cursor:pointer;font-weight:bold;white-space:nowrap}
+nav button.on{background:var(--terr);color:white}
+main{max-width:1200px;margin:auto;padding:18px}.hero{background:linear-gradient(135deg,#fffaf6,#f5d5c0);border:1px solid var(--linha);padding:20px;border-radius:18px;margin-bottom:15px}
+.hero h2{margin:0 0 6px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:14px}.card h3{margin:0 0 7px;font-size:14px}.big{font-size:23px;font-weight:bold}
+.form{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:15px;margin-bottom:14px}.formgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+label{display:block;font-size:13px;font-weight:bold;margin-bottom:5px}input,select,textarea{width:100%;padding:10px;border:1px solid #dfc8b7;border-radius:8px;background:#fff;font:inherit;color:inherit}textarea{min-height:80px;resize:vertical}
+button.primary,.primary{background:var(--terr);color:white;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:bold}.secondary{background:#f0dfd1;color:var(--marrom);border:0;border-radius:8px;padding:10px 14px;cursor:pointer}.danger{background:#f4d2cf;color:#7d211c;border:0;border-radius:8px;padding:8px 10px;cursor:pointer}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--linha);border-radius:12px;overflow:hidden}th,td{padding:9px;border-bottom:1px solid #eddcd0;text-align:left;font-size:13px}th{background:#f1ddcf}.muted{color:#765f54;font-size:13px}.ok{color:var(--verde);font-weight:bold}.bad{color:var(--vermelho);font-weight:bold}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:100;padding:20px}.modal.open{display:flex}.modalbox{background:white;width:min(700px,100%);max-height:90vh;overflow:auto;border-radius:14px;padding:22px}
+.receipt{border:1px solid #bbb;padding:30px;background:#fff;max-width:700px;margin:auto}.receipt h1{text-align:center;color:var(--terr)}.receipt .line{border-bottom:1px solid #aaa;margin:14px 0}
+@media(max-width:800px){.grid,.formgrid{grid-template-columns:1fr 1fr}.hamb{display:block}.date{display:none}}
+@media(max-width:600px){.grid,.formgrid{grid-template-columns:1fr}nav{top:66px}main{padding:10px}header{position:sticky}}
+@media print{header,nav,.no-print{display:none!important}body{background:#fff}.modal{position:static;background:none;padding:0}.modalbox{max-height:none;box-shadow:none;width:100%}.receipt{border:0}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><img src="logo-acervo-camila.jpg" onerror="this.style.display='none'"><div><b>ACERVO CAMILA</b><small>Sistema de Gestão de Brechó</small></div></div>
+ <div id="date"></div>
+</header>
+<nav id="nav"></nav>
+<main id="app"></main>
+<div id="modal" class="modal"><div class="modalbox" id="modalbox"></div></div>
+
+<script>
+const KEY="acervoCamilaPro";
+const empty={fornecedores:[],produtos:[],clientes:[],vendas:[],recebimentos:[],repasses:[],despesas:[]};
+let db=JSON.parse(localStorage.getItem(KEY)||"null")||empty;
+const tabs=[["home","Início"],["prod","Estoque"],["form","Fornecedores"],["cli","Clientes"],["venda","Vendas"],["rec","Recebimentos"],["rep","Repasses"],["cartao","Cartão & Parcelas"],["desp","Despesas"],["rel","Relatórios"],["doc","Recibos & Devoluções"],["backup","Backup"]];
+let current="home";
+const money=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>new Date().toISOString().slice(0,10);
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function nav(){document.getElementById("nav").innerHTML=tabs.map(([id,n])=>`<button class="${id===current?'on':''}" onclick="show('${id}')">${n}</button>`).join("")}
+function show(t){current=t;nav();render()}
+function opts(arr,ph="Selecione"){return `<option value="">${ph}</option>`+arr.map(x=>`<option value="${x.id}">${x.nome||x.descricao||x.codigo||x.id}</option>`).join("")}
+function layout(title,sub,body){return `<div class="hero"><h2>${title}</h2><div class="muted">${sub||""}</div></div>${body}`}
+function table(headers,rows){return `<table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows||`<tr><td colspan="${headers.length}" class="muted">Nenhum registro cadastrado.</td></tr>`}</tbody></table>`}
+function del(collection,id){if(confirm("Excluir este registro?")){db[collection]=db[collection].filter(x=>x.id!==id);save()}}
+function render(){
+ document.getElementById("date").textContent=new Date().toLocaleDateString("pt-BR");
+ const a=document.getElementById("app");
+ if(current==="home")return a.innerHTML=home();
+ if(current==="prod")return a.innerHTML=prod();
+ if(current==="form")return a.innerHTML=fornecedores();
+ if(current==="cli")return a.innerHTML=clientes();
+ if(current==="venda")return a.innerHTML=vendas();
+ if(current==="rec")return a.innerHTML=recebimentos();
+ if(current==="rep")return a.innerHTML=repasses();
+ if(current==="cartao")return a.innerHTML=cartao();
+ if(current==="desp")return a.innerHTML=despesas();
+ if(current==="rel")return a.innerHTML=relatorios();
+ if(current==="doc")return a.innerHTML=documentos();
+ if(current==="backup")return a.innerHTML=backup();
+}
+function home(){
+ const estoque=db.produtos.filter(p=>(p.status||"Disponível")!=="Vendido").length;
+ const vendas=db.vendas.reduce((s,v)=>s+Number(v.valor||0),0);
+ const recebido=db.recebimentos.reduce((s,r)=>s+Number(r.valor||0),0);
+ const aReceber=Math.max(0,vendas-recebido);
+ return layout("Bem-vinda ao Acervo Camila","Controle de estoque, fornecedores, vendas e financeiro em um só lugar.",
+ `<div class="grid">
+ <div class="card"><h3>Peças disponíveis</h3><div class="big">${estoque}</div></div>
+ <div class="card"><h3>Total de vendas</h3><div class="big">${money(vendas)}</div></div>
+ <div class="card"><h3>Total recebido</h3><div class="big">${money(recebido)}</div></div>
+ <div class="card"><h3>A receber</h3><div class="big">${money(aReceber)}</div></div></div>
+ <div class="form"><h3>Atalhos</h3><div class="actions"><button class="primary" onclick="show('venda')">+ Nova venda</button><button class="secondary" onclick="show('rec')">+ Registrar recebimento</button><button class="secondary" onclick="show('cartao')">💳 Ver parcelas</button><button class="secondary" onclick="show('doc')">🧾 Recibo / devolução</button></div></div>`);
+}
+function fornecedores(){
+ return layout("Fornecedores / Fornecedoras","Cadastre quem deixa peças em consignação ou fornece mercadorias.",
+ `<form class="form" onsubmit="addFornecedor(event)"><div class="formgrid">
+ <div><label>Nome</label><input id="fnome" required></div><div><label>WhatsApp / telefone</label><input id="ftel"></div><div><label>Documento</label><input id="fdoc"></div><div><label>Observações</label><input id="fobs"></div></div><div class="actions"><button class="primary">Salvar fornecedora</button></div></form>
+ ${table(["Nome","Telefone","Documento","Peças no estoque","Ações"],db.fornecedores.map(f=>`<tr><td>${f.nome}</td><td>${f.tel||"-"}</td><td>${f.doc||"-"}</td><td>${db.produtos.filter(p=>p.fornecedorId===f.id&&(p.status||"Disponível")!=="Vendido").length}</td><td><button class="danger" onclick="del('fornecedores','${f.id}')">Excluir</button></td></tr>`).join(""))}`);
+}
+function addFornecedor(e){e.preventDefault();db.fornecedores.push({id:uid(),nome:fnome.value,tel:ftel.value,doc:fdoc.value,obs:fobs.value});save()}
+function clientes(){
+ return layout("Clientes","Cadastro simples para facilitar recibos e vendas.",
+ `<form class="form" onsubmit="addCliente(event)"><div class="formgrid"><div><label>Nome</label><input id="cnome" required></div><div><label>Telefone</label><input id="ctel"></div><div><label>CPF</label><input id="ccpf"></div><div><label>Observações</label><input id="cobs"></div></div><div class="actions"><button class="primary">Salvar cliente</button></div></form>
+ ${table(["Nome","Telefone","CPF","Ações"],db.clientes.map(c=>`<tr><td>${c.nome}</td><td>${c.tel||"-"}</td><td>${c.cpf||"-"}</td><td><button class="danger" onclick="del('clientes','${c.id}')">Excluir</button></td></tr>`).join(""))}`);
+}
+function addCliente(e){e.preventDefault();db.clientes.push({id:uid(),nome:cnome.value,tel:ctel.value,cpf:ccpf.value,obs:cobs.value});save()}
+function prod(){
+ return layout("Estoque","Cada peça pode ficar vinculada a uma fornecedora.",
+ `<form class="form" onsubmit="addProduto(event)"><div class="formgrid">
+ <div><label>Código</label><input id="pcod" placeholder="Ex.: AC001"></div><div><label>Descrição</label><input id="pdesc" required></div><div><label>Marca</label><input id="pmarca"></div><div><label>Tamanho</label><input id="ptam"></div>
+ <div><label>Valor de venda</label><input id="pvalor" type="number" step=".01" required></div><div><label>Fornecedora</label><select id="pforn">${opts(db.fornecedores,"Sem fornecedora")}</select></div><div><label>Data de entrada</label><input id="pdata" type="date" value="${today()}"></div><div><label>Status</label><select id="pstatus"><option>Disponível</option><option>Reservado</option><option>Devolvido</option><option>Vendido</option></select></div>
+ </div><div class="actions"><button class="primary">Cadastrar peça</button></div></form>
+ ${table(["Código","Peça","Marca","Tam.","Venda","Fornecedora","Status","Ações"],db.produtos.map(p=>`<tr><td>${p.codigo||"-"}</td><td>${p.descricao}</td><td>${p.marca||"-"}</td><td>${p.tamanho||"-"}</td><td>${money(p.valor)}</td><td>${db.fornecedores.find(f=>f.id===p.fornecedorId)?.nome||"-"}</td><td>${p.status||"Disponível"}</td><td><button class="danger" onclick="del('produtos','${p.id}')">Excluir</button></td></tr>`).join(""))}`);
+}
+function addProduto(e){e.preventDefault();db.produtos.push({id:uid(),codigo:pcod.value,descricao:pdesc.value,marca:pmarca.value,tamanho:ptam.value,valor:Number(pvalor.value),fornecedorId:pforn.value,data:pdata.value,status:pstatus.value});save()}
+function vendas(){
+ return layout("Vendas","Registre a venda e a forma de pagamento. Para cartão parcelado, use o campo de parcelas.",
+ `<form class="form" onsubmit="addVenda(event)"><div class="formgrid">
+ <div><label>Data</label><input id="vdata" type="date" value="${today()}"></div><div><label>Cliente</label><select id="vcli">${opts(db.clientes,"Consumidor final")}</select></div><div><label>Peça</label><select id="vprod">${opts(db.produtos.filter(p=>(p.status||"Disponível")!=="Vendido"),"Selecione a peça")}</select></div><div><label>Valor da venda</label><input id="vvalor" type="number" step=".01" required></div>
+ <div><label>Forma de pagamento</label><select id="vforma" onchange="toggleParcelas()"><option>Pix</option><option>Dinheiro</option><option>Débito</option><option>Cartão de crédito</option><option>Transferência</option><option>Outro</option></select></div><div><label>Parcelas</label><input id="vparcelas" type="number" min="1" value="1"></div><div><label>1º vencimento</label><input id="vvencto" type="date" value="${today()}"></div><div><label>Observação</label><input id="vobs"></div>
+ </div><div class="actions"><button class="primary">Registrar venda</button></div></form>
+ ${table(["Data","Cliente","Peça","Valor","Pagamento","Parcelas","Ações"],db.vendas.map(v=>`<tr><td>${fmt(v.data)}</td><td>${db.clientes.find(c=>c.id===v.clienteId)?.nome||"Consumidor final"}</td><td>${db.produtos.find(p=>p.id===v.produtoId)?.descricao||"-"}</td><td>${money(v.valor)}</td><td>${v.forma}</td><td>${v.parcelas||1}</td><td><button class="secondary" onclick="abrirReciboVenda('${v.id}')">Recibo</button> <button class="danger" onclick="del('vendas','${v.id}')">Excluir</button></td></tr>`).join(""))}`);
+}
+function toggleParcelas(){}
+function addVenda(e){
+ e.preventDefault();
+ const n=Math.max(1,Number(vparcelas.value||1)); const id=uid();
+ const venda={id,data:vdata.value,clienteId:vcli.value,produtoId:vprod.value,valor:Number(vvalor.value),forma:vforma.value,parcelas:n,primeiroVencimento:vvencto.value,obs:vobs.value};
+ db.vendas.push(venda);
+ const p=db.produtos.find(x=>x.id===vprod.value); if(p)p.status="Vendido";
+ if(venda.forma==="Cartão de crédito" && n>1){
+   for(let i=1;i<=n;i++){let d=new Date(venda.primeiroVencimento+"T12:00:00");d.setMonth(d.getMonth()+i-1);db.recebimentos.push({id:uid(),vendaId:id,data:d.toISOString().slice(0,10),valor:Number((venda.valor/n).toFixed(2)),forma:"Cartão de crédito",parcela:i,totalParcelas:n,status:"Pendente",clienteId:venda.clienteId});}
+ } else db.recebimentos.push({id:uid(),vendaId:id,data:venda.data,valor:venda.valor,forma:venda.forma,status:"Recebido",clienteId:venda.clienteId});
+ save();
+}
+function recebimentos(){
+ const total=db.recebimentos.reduce((s,r)=>s+Number(r.valor||0),0), pend=db.recebimentos.filter(r=>r.status==="Pendente").reduce((s,r)=>s+Number(r.valor||0),0);
+ return layout("Recebimentos","Controle do que já entrou e do que ainda está pendente.",
+ `<div class="grid"><div class="card"><h3>Total lançado</h3><div class="big">${money(total)}</div></div><div class="card"><h3>Pendente</h3><div class="big">${money(pend)}</div></div></div>
+ <div class="form"><div class="formgrid"><div><label>Venda</label><select id="rVenda">${opts(db.vendas,"Selecione")}</select></div><div><label>Data recebimento</label><input id="rData" type="date" value="${today()}"></div><div><label>Valor</label><input id="rValor" type="number" step=".01"></div><div><label>Forma</label><select id="rForma"><option>Pix</option><option>Dinheiro</option><option>Cartão de crédito</option><option>Débito</option><option>Transferência</option></select></div></div><div class="actions"><button class="primary" onclick="manualReceb()">Registrar recebimento</button></div></div>
+ ${table(["Data","Cliente","Valor","Forma","Parcela","Status","Ações"],db.recebimentos.map(r=>`<tr><td>${fmt(r.data)}</td><td>${db.clientes.find(c=>c.id===r.clienteId)?.nome||"-"}</td><td>${money(r.valor)}</td><td>${r.forma||"-"}</td><td>${r.parcela?r.parcela+"/"+r.totalParcelas:"-"}</td><td class="${r.status==="Pendente"?"bad":"ok"}">${r.status||"Recebido"}</td><td>${r.status==="Pendente"?`<button class="primary" onclick="baixarParcela('${r.id}')">Baixar</button>`:""} <button class="danger" onclick="del('recebimentos','${r.id}')">Excluir</button></td></tr>`).join(""))}`);
+}
+function manualReceb(){const v=db.vendas.find(x=>x.id===rVenda.value);db.recebimentos.push({id:uid(),vendaId:rVenda.value,clienteId:v?.clienteId,data:rData.value,valor:Number(rValor.value||v?.valor||0),forma:rForma.value,status:"Recebido"});save()}
+function baixarParcela(id){const r=db.recebimentos.find(x=>x.id===id);if(r){r.status="Recebido";r.data=today();save()}}
+function cartao(){
+ const parcelas=db.recebimentos.filter(r=>r.forma==="Cartão de crédito");
+ const pend=parcelas.filter(r=>r.status==="Pendente");
+ return layout("Cartão de crédito & Parcelas","Veja cada parcela, vencimento e o que ainda falta receber.",
+ `<div class="grid"><div class="card"><h3>Total no cartão</h3><div class="big">${money(parcelas.reduce((s,r)=>s+Number(r.valor),0))}</div></div><div class="card"><h3>A receber</h3><div class="big">${money(pend.reduce((s,r)=>s+Number(r.valor),0))}</div></div><div class="card"><h3>Parcelas pendentes</h3><div class="big">${pend.length}</div></div><div class="card"><h3>Parcelas recebidas</h3><div class="big">${parcelas.filter(r=>r.status!=="Pendente").length}</div></div></div>
+ ${table(["Vencimento","Cliente","Parcela","Valor","Status","Ação"],parcelas.map(r=>`<tr><td>${fmt(r.data)}</td><td>${db.clientes.find(c=>c.id===r.clienteId)?.nome||"-"}</td><td>${r.parcela||1}/${r.totalParcelas||1}</td><td>${money(r.valor)}</td><td class="${r.status==="Pendente"?"bad":"ok"}">${r.status}</td><td>${r.status==="Pendente"?`<button class="primary" onclick="baixarParcela('${r.id}')">Recebido</button>`:"✓"}</td></tr>`).join(""))}`);
+}
+function repasses(){
+ const rows=db.fornecedores.map(f=>{const itens=db.produtos.filter(p=>p.fornecedorId===f.id);const vendidos=itens.filter(p=>p.status==="Vendido");const bruto=vendidos.reduce((s,p)=>s+Number(p.valor),0);return `<tr><td>${f.nome}</td><td>${itens.length}</td><td>${vendidos.length}</td><td>${money(bruto)}</td><td><button class="secondary" onclick="protocoloFornecedor('${f.id}')">Protocolo</button></td></tr>`}).join("");
+ return layout("Repasses às fornecedoras","Resumo por fornecedora para conferência.",
+ table(["Fornecedora","Peças","Vendidas","Total vendido","Documento"],rows));
+}
+function despesas(){
+ return layout("Despesas","Registre custos do brechó.",
+ `<form class="form" onsubmit="addDespesa(event)"><div class="formgrid"><div><label>Data</label><input id="ddata" type="date" value="${today()}"></div><div><label>Descrição</label><input id="ddesc" required></div><div><label>Categoria</label><input id="dcat" placeholder="Ex.: embalagem"></div><div><label>Valor</label><input id="dvalor" type="number" step=".01" required></div></div><div class="actions"><button class="primary">Salvar despesa</button></div></form>
+ ${table(["Data","Descrição","Categoria","Valor","Ações"],db.despesas.map(d=>`<tr><td>${fmt(d.data)}</td><td>${d.descricao}</td><td>${d.categoria||"-"}</td><td>${money(d.valor)}</td><td><button class="danger" onclick="del('despesas','${d.id}')">Excluir</button></td></tr>`).join(""))}`);
+}
+function addDespesa(e){e.preventDefault();db.despesas.push({id:uid(),data:ddata.value,descricao:ddesc.value,categoria:dcat.value,valor:Number(dvalor.value)});save()}
+function relatorios(){
+ const vendas=db.vendas.reduce((s,v)=>s+Number(v.valor),0), rec=db.recebimentos.filter(r=>r.status!=="Pendente").reduce((s,r)=>s+Number(r.valor),0), desp=db.despesas.reduce((s,d)=>s+Number(d.valor),0);
+ return layout("Relatórios","Visão financeira rápida do Acervo Camila.",
+ `<div class="grid"><div class="card"><h3>Vendas</h3><div class="big">${money(vendas)}</div></div><div class="card"><h3>Recebido</h3><div class="big">${money(rec)}</div></div><div class="card"><h3>Despesas</h3><div class="big">${money(desp)}</div></div><div class="card"><h3>Resultado caixa</h3><div class="big">${money(rec-desp)}</div></div></div>
+ <div class="form"><h3>Estoque por fornecedora</h3>${table(["Fornecedora","Disponíveis","Vendidas"],db.fornecedores.map(f=>`<tr><td>${f.nome}</td><td>${db.produtos.filter(p=>p.fornecedorId===f.id&&(p.status||"Disponível")==="Disponível").length}</td><td>${db.produtos.filter(p=>p.fornecedorId===f.id&&p.status==="Vendido").length}</td></tr>`).join(""))}</div>`);
+}
+function documentos(){
+ return layout("Recibos & Protocolos","Emita recibo de venda e protocolo de devolução para a fornecedora.",
+ `<div class="grid"><div class="card"><h3>Recibo de venda</h3><p class="muted">Selecione uma venda para visualizar e imprimir.</p><select id="docVenda">${opts(db.vendas,"Selecione a venda")}</select><div class="actions"><button class="primary" onclick="abrirReciboVenda(docVenda.value)">Abrir recibo</button></div></div>
+ <div class="card"><h3>Devolução de peças</h3><p class="muted">Gere um protocolo com as peças devolvidas à fornecedora.</p><select id="docForn">${opts(db.fornecedores,"Selecione a fornecedora")}</select><div class="actions"><button class="primary" onclick="protocoloFornecedor(docForn.value)">Abrir protocolo</button></div></div></div>`);
+}
+function abrirReciboVenda(id){
+ const v=db.vendas.find(x=>x.id===id);if(!v)return alert("Selecione uma venda.");
+ const c=db.clientes.find(x=>x.id===v.clienteId),p=db.produtos.find(x=>x.id===v.produtoId);
+ openModal(`<div class="receipt" id="printArea"><h1>RECIBO DE VENDA</h1><p><b>ACERVO CAMILA</b></p><div class="line"></div>
+ <p>Recebi de <b>${c?.nome||"Cliente"}</b> a importância de <b>${money(v.valor)}</b>.</p>
+ <p><b>Peça:</b> ${p?.descricao||"-"} ${p?.marca?`• ${p.marca}`:""} ${p?.tamanho?`• Tam. ${p.tamanho}`:""}</p>
+ <p><b>Forma de pagamento:</b> ${v.forma} ${v.parcelas>1?`• ${v.parcelas} parcelas`:""}</p>
+ <p><b>Data:</b> ${fmt(v.data)}</p><div class="line"></div><p>Assinatura: __________________________________________</p></div><div class="actions no-print"><button class="primary" onclick="window.print()">Imprimir / Salvar PDF</button><button class="secondary" onclick="closeModal()">Fechar</button></div>`);
+}
+function protocoloFornecedor(id){
+ const f=db.fornecedores.find(x=>x.id===id);if(!f)return alert("Selecione uma fornecedora.");
+ const itens=db.produtos.filter(p=>p.fornecedorId===id&&(p.status==="Devolvido"));
+ openModal(`<div class="receipt" id="printArea"><h1>PROTOCOLO DE DEVOLUÇÃO</h1><p><b>ACERVO CAMILA</b></p><p><b>Fornecedora:</b> ${f.nome}</p><p><b>Data:</b> ${fmt(today())}</p><div class="line"></div>
+ ${table(["Código","Peça","Marca","Tamanho"],itens.map(p=>`<tr><td>${p.codigo||"-"}</td><td>${p.descricao}</td><td>${p.marca||"-"}</td><td>${p.tamanho||"-"}</td></tr>`).join(""))}
+ <p style="margin-top:25px">Declaro que as peças acima foram devolvidas.</p><p>Fornecedora: ____________________________________</p><p>Acervo Camila: __________________________________</p></div><div class="actions no-print"><button class="primary" onclick="window.print()">Imprimir / Salvar PDF</button><button class="secondary" onclick="closeModal()">Fechar</button></div>`);
+}
+function backup(){
+ return layout("Backup","Faça uma cópia dos dados do sistema antes de grandes alterações.",
+ `<div class="form"><div class="actions"><button class="primary" onclick="exportar()">Baixar backup</button><button class="secondary" onclick="document.getElementById('file').click()">Restaurar backup</button><button class="danger" onclick="limparTudo()">Apagar todos os dados</button></div><input id="file" type="file" accept=".json" style="display:none" onchange="importar(event)"></div>
+ <div class="muted">Os dados deste sistema ficam armazenados neste navegador. O backup é importante para não perder cadastros.</div>`);
+}
+function exportar(){const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="backup-acervo-camila.json";a.click();URL.revokeObjectURL(a.href)}
+function importar(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save();alert("Backup restaurado.")}catch{alert("Arquivo de backup inválido.")}};r.readAsText(f)}
+function limparTudo(){if(confirm("ATENÇÃO: apagar todos os dados deste navegador?")){db=JSON.parse(JSON.stringify(empty));save()}}
+function fmt(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):"-"}
+function openModal(html){document.getElementById("modalbox").innerHTML=html;document.getElementById("modal").classList.add("open")}
+function closeModal(){document.getElementById("modal").classList.remove("open")}
+nav();render();
+</script>
+</body>
+</html>
