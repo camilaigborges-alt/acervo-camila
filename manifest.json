@@ -1,1 +1,9 @@
-{"name": "Acervo Camila", "short_name": "Acervo Camila", "start_url": "./index.html", "display": "standalone", "background_color": "#F8E9DC", "theme_color": "#9A431F", "lang": "pt-BR"}
+{
+  "name": "Acervo Camila",
+  "short_name": "Acervo Camila",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fff8f2",
+  "theme_color": "#9A431F",
+  "lang": "pt-BR"
+}
