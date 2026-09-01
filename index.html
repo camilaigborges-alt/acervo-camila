@@ -207,13 +207,18 @@ a.innerHTML=`
 function prod(a){
 let rows=db.produtos.map(p=>`
 <tr>
-<td>${esc(p.codigo)}</td><td>${esc(p.nome)}</td><td>${esc(p.marca)}</td>
-<td>${esc(p.tamanho)}</td><td>${esc(p.fornecedor||"-")}</td>
+<td>
+${p.foto ? `<img src="${p.foto}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;">` : "Sem foto"}
+</td>
+<td>${esc(p.codigo)}</td>
+<td>${esc(p.nome)}</td>
+<td>${esc(p.marca)}</td>
+<td>${esc(p.tamanho)}</td>
+<td>${esc(p.fornecedor||"-")}</td>
 <td>${br(p.preco)}</td>
 <td><span class="badge ${p.status==="vendido"?"pendente":"pago"}">${p.status==="vendido"?"Vendido":"Disponível"}</span></td>
 <td><button class="secondary" onclick="excluir('produtos','${p.id}')">Excluir</button></td>
 </tr>`).join("");
-
 a.innerHTML=`
 <div class="hero"><h2>Estoque</h2><p>Controle das peças e do fornecedor de cada item.</p></div>
 
@@ -224,6 +229,7 @@ a.innerHTML=`
 <div><label>Peça</label><input id="p_nome"></div>
 <div><label>Marca</label><input id="p_marca"></div>
 <div><label>Tamanho</label><input id="p_tamanho"></div>
+<div><label>Foto da peça</label><input id="p_foto" type="file" accept="image/*"></div>
 <div><label>Fornecedor</label><input id="p_fornecedor"></div>
 <div><label>Valor de venda</label><input id="p_preco" type="number" step=".01"></div>
 </div>
@@ -231,24 +237,47 @@ a.innerHTML=`
 </div>
 
 <table>
-<tr><th>Código</th><th>Peça</th><th>Marca</th><th>Tamanho</th>
-<th>Fornecedor</th><th>Venda</th><th>Status</th><th></th></tr>
-${rows||"<tr><td colspan=8>Nenhuma peça cadastrada.</td></tr>"}
-</table>`;
+<tr>
+<th>Foto</th>
+<th>Código</th>
+<th>Peça</th>
+<th>Marca</th>
+<th>Tamanho</th>
+<th>Fornecedor</th>
+<th>Venda</th>
+<th>Status</th>
+<th>Ação</th>
+</tr>
+${rows||"<tr><td colspan=9>Nenhuma peça cadastrada.</td></tr>"}
+</table>
 }
 
 function addProd(){
-db.produtos.push({
-id:uid(),
-codigo:val("p_codigo"),
-nome:val("p_nome"),
-marca:val("p_marca"),
-tamanho:val("p_tamanho"),
-fornecedor:val("p_fornecedor"),
-preco:Number(val("p_preco")||0),
-status:"disponível"
-});
-save();
+  const fotoInput=document.getElementById("p_foto");
+  const salvarProduto=(foto="")=>{
+    db.produtos.push({
+      id:uid(),
+      codigo:val("p_codigo"),
+      nome:val("p_nome"),
+      marca:val("p_marca"),
+      tamanho:val("p_tamanho"),
+      fornecedor:val("p_fornecedor"),
+      preco:Number(val("p_preco")||0),
+      foto:foto,
+      status:"disponível"
+    });
+    save();
+  };
+
+  if(fotoInput.files && fotoInput.files[0]){
+    const reader=new FileReader();
+    reader.onload=function(e){
+      salvarProduto(e.target.result);
+    };
+    reader.readAsDataURL(fotoInput.files[0]);
+  }else{
+    salvarProduto("");
+  }
 }
 
 /* FORNECEDORES */
