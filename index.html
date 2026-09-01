@@ -308,24 +308,24 @@ save();
 
 /* CLIENTES */
 function cli(a){
-let rows=db.clientes.map(c=>`
-<tr><td>${esc(c.nome)}</td><td>${esc(c.telefone)}</td><td>${esc(c.obs)}</td>
-<td><button class="secondary" onclick="excluir('clientes','${c.id}')">Excluir</button></td></tr>`).join("");
+  let rows=db.clientes.map(function(c){
+    return "<tr><td>"+esc(c.nome)+"</td><td>"+esc(c.telefone)+"</td><td>"+esc(c.obs)+"</td><td><button class='secondary' onclick='excluirCliente(\""+c.id+"\")'>Excluir</button></td></tr>";
+  }).join("");
 
-a.innerHTML=`
-<div class="hero"><h2>Clientes</h2></div>
-<div class="form">
-<div class="formgrid">
-<div><label>Nome</label><input id="c_nome"></div>
-<div><label>Telefone</label><input id="c_tel"></div>
-<div><label>Observação</label><input id="c_obs"></div>
-</div>
-<div class="actions"><button class="primary" onclick="addCli()">Cadastrar cliente</button></div>
-</div>
-<table><tr><th>Nome</th><th>Telefone</th><th>Observação</th><th></th></tr>
-${rows||"<tr><td colspan=4>Nenhum cliente cadastrado.</td></tr>"}</table>`;
+  a.innerHTML=
+  '<div class="hero"><h2>Clientes</h2><p>Controle seus clientes do Acervo Camila.</p></div>'+
+  '<div class="form">'+
+  '<div class="formgrid">'+
+  '<div><label>Nome</label><input id="c_nome"></div>'+
+  '<div><label>Telefone</label><input id="c_tel"></div>'+
+  '<div><label>Observação</label><input id="c_obs"></div>'+
+  '</div>'+
+  '<div class="actions"><button class="primary" onclick="addCli()">Cadastrar cliente</button></div>'+
+  '</div>'+
+  '<table><tr><th>Nome</th><th>Telefone</th><th>Observação</th><th></th></tr>'+
+  (rows||'<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>')+
+  '</table>';
 }
-
 function addCli(){
 db.clientes.push({id:uid(),nome:val("c_nome"),telefone:val("c_tel"),obs:val("c_obs")});
 save();
